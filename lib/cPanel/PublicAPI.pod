@@ -242,31 +242,16 @@ For more information on what calls are available and how they can be referenced,
 
 =head2 Querying cPanel's APIs
 
-cPanel supports two APIs, designated "API1" and "API2".
+cPanel supports three APIs, designated "API1", "API2", and "UAPI".
 
-cPanel API calls are seperate into Modules, these module names relate to modules within the Cpanel namespace on a cPanel server.  Each module defines a set of functions that are from either API1 or API2 (or both).
-
-There are two distinct differences between API1 and API2:
-
-=over
-
-=item * API1 Takes in ordered parameters and returns strings
-
-=item * API2 uses named parameters and returns hashes or arrays of hashes
-
-=back
-
-Within the context of the public api, calling a function from API1 or API2 will always return a hash, but the specific data returned from the API call will be contained within the 'data' key of the response.
-
-For more information on the differences between API1 and API2 please see the documentation: L<http://docs.cpanel.net/twiki/bin/view/DeveloperResources/ApiBasics/WebHome>
-
-For information on calling API1 and API2 direct via HTTP, please see: L<http://docs.cpanel.net/twiki/bin/view/AllDocumentation/AutomationIntegration/CallingAPIFunctions>
+To learn more about these APIs, see cPanel’s
+L<Developer Documentation|https://documentation.cpanel.net/display/DD/Developer+Documentation+Home>.
 
 =head3 cpanel_api1_request()
 
 C<cpanel_api1_request()> is used to query cPanel's API1, the function used for querying API1 has the following syntax:
 
-  $cp->cpanel_api1_request($service, \%cfg [, \@params, $format ] );
+  $cp->cpanel_api1_request($service, \%cfg [, \@params [, $format ] ] );
 
 =over
 
@@ -286,7 +271,7 @@ To see what modules and functions are available for making API1 calls, please se
 
 C<cpanel_api2_request()> is used to query cPanel's API2, the function use for querying API2 has the following syntax:
 
-  $cp->cpanel_api2_request( $service, \%cfg [, \%params, $format ] );
+  $cp->cpanel_api2_request( $service, \%cfg [, \%params [, $format ] ] );
 
 =over
 
