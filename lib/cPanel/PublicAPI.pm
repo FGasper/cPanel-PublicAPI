@@ -419,10 +419,13 @@ sub _establish_session {
 
     if ( my $security_token = ( split /\//, $resp->{'headers'}->{'location'} )[1] ) {
         $self->{'security_tokens'}->{$service} = $security_token;
+        $self->debug("Established $service session");
         return 1;
     }
 
-    $self->error("Failed to establish session and parse security token: $resp->{'status'} $resp->{'reason'}");
+    my $details = join(',', grep { defined && length } @{$resp}{'reason','content'} );
+
+    $self->error("Failed to establish session and parse security token: $resp->{'status'} $details");
     die $self->{'error'};
 }
 
@@ -465,6 +468,38 @@ sub cpanel_api1_request {
     return $self->_parse_returndata(
         {
             'caller' => 'cpanel_api1',
+            'data'   => $data,
+            'format' => $format,
+        }
+    );
+}
+
+sub cpanel_uapi_request {
+    my ($self, $service, $cfg, $formdata, $format) = @_;
+
+    $self->_init_serializer() if !exists $cPanel::PublicAPI::CFG{'serializer'};
+
+    local $formdata->{'cpanel_jsonapi_apiversion'} = 3 if $service eq 'whostmgr';
+    local $formdata->{'cpanel_jsonapi_module'} = $cfg->{'module'} if $service eq 'whostmgr';
+    local $formdata->{'cpanel_jsonapi_func'} = $cfg->{'func'} if $service eq 'whostmgr';
+    local $formdata->{'cpanel_jsonapi_user'} = $cfg->{'user'} if $service eq 'whostmgr';
+
+    my $url = ($service eq 'whostmgr') ? '/json-api/cpanel' : "/execute/$cfg->{'module'}/$cfg->{'func'}";
+
+    my $data;
+
+    # undefs are $status and $statusmsg, but these appear to be
+    # unused by the other cpanel API callers.
+    ( undef, undef, $data ) = $self->api_request(
+        $service,
+        $url,
+        'POST',
+        $formdata,
+    );
+
+    return $self->_parse_returndata(
+        {
+            'caller' => 'cpanel_uapi',
             'data'   => $data,
             'format' => $format,
         }
@@ -524,6 +559,7 @@ sub _parse_returndata {
             'whm_api'     => \&_check_whm_api_errors,
             'cpanel_api1' => \&_check_cpanel_api1_errors,
             'cpanel_api2' => \&_check_cpanel_api2_errors,
+            'cpanel_uapi' => \&_check_cpanel_uapi_errors,
         };
         return $error_check_dt->{ $opts_hr->{'caller'} }->( $self, $opts_hr->{'call'}, $parsed_data );
     }
@@ -563,6 +599,17 @@ sub _check_cpanel_api2_errors {
         $self->error( "cPanel::PublicAPI::cpanel_api2_request was called with the invalid API2 call of: " . $parsed_data->{'cpanelresult'}->{'module'} . '::' . $parsed_data->{'cpanelresult'}->{'func'} );
         return;
     }
+    return $parsed_data;
+}
+
+sub _check_cpanel_uapi_errors {
+    my ($self, undef, $parsed_data) = @_;
+
+    # The existing error-check logic only checks for nonexistent functions,
+    # and it does so by assuming the text matches particular English phrase
+    # patterns. Since this isn’t reliable and doesn’t seem all that useful
+    # anyway, for now we don’t reproduce that behavior here.
+
     return $parsed_data;
 }
 
